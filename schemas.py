@@ -5,6 +5,7 @@ from typing import List, Optional
 class ToolBase(BaseModel):
     name: str
     description: Optional[str] = None
+    type: str
 
 class ToolCreate(ToolBase):
     pass
@@ -18,6 +19,7 @@ class Tool(ToolBase):
 class McpServerBase(BaseModel):
     name: str
     url: str
+    type: str
 
 class McpServerCreate(McpServerBase):
     pass
