@@ -3,4 +3,14 @@ pip
 autopep8
 
 # App
-flask
+fastapi
+uvicorn
+mcp
+celery
+redis
+ollama
+SQLAlchemy
+alembic
+passlib[bcrypt]
+python-jose
+python-dotenv
