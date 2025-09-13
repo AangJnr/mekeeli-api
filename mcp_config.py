@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session, joinedload
 
 # Imports from the 'mcp-use' package
 from mcp_use.agents import MCPAgent, MCPClient
-from mcp_use.llms import OllamaLlm
-
+from langchain_ollama.llms import OllamaLLM
+ 
 def get_agent_for_user(db: Session, user: models.User):
     """
     Dynamically creates and configures an MCPAgent instance for a specific user
@@ -60,7 +60,7 @@ def get_agent_for_user(db: Session, user: models.User):
             llm_model = app_model_setting.value
 
     if not llm_model:
-        llm_model = "gemma2"
+        llm_model = "gemma3:4b"
 
     llm = OllamaLlm(model=llm_model)
 

@@ -14,3 +14,4 @@ alembic
 passlib[bcrypt]
 python-jose
 python-dotenv
+gunicorn
