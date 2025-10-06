@@ -20,5 +20,12 @@ USER appuser
 # Expose the port the app runs on
 EXPOSE 8000
 
+# Copy the entrypoint script and make it executable
+COPY --chown=appuser:appuser entrypoint.sh .
+RUN chmod +x ./entrypoint.sh
+
+# Set the entrypoint script
+ENTRYPOINT ["./entrypoint.sh"]
+
 # Command to run the application using a production-ready server (Gunicorn)
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]

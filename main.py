@@ -23,3 +23,7 @@ app.include_router(permissions_api.router, tags=["Permissions API"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the MCP API"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
