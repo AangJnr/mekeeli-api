@@ -1,8 +1,6 @@
 
 from sqlalchemy.orm import Session
-import models
-import schemas
-import security
+import models, schemas, security
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -16,7 +14,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = security.get_password_hash(user.password)
     db_user = models.User(
-        username=user.username,
+        username=user.username, 
         hashed_password=hashed_password,
         user_type=user.user_type
     )

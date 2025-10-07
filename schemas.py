@@ -1,34 +1,7 @@
 
 from pydantic import BaseModel
 from typing import List, Optional
-
-class ToolBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    type: str
-
-class ToolCreate(ToolBase):
-    pass
-
-class Tool(ToolBase):
-    id: int
-
-    class Config:
-        orm_mode = True
-
-class McpServerBase(BaseModel):
-    name: str
-    url: str
-    type: str
-
-class McpServerCreate(McpServerBase):
-    pass
-
-class McpServer(McpServerBase):
-    id: int
-
-    class Config:
-        orm_mode = True
+from enums import UserType
 
 class PermissionBase(BaseModel):
     name: str
@@ -42,6 +15,51 @@ class Permission(PermissionBase):
     class Config:
         orm_mode = True
 
+class PermissionGroupBase(BaseModel):
+    name: str
+
+class PermissionGroupCreate(PermissionGroupBase):
+    pass
+
+class PermissionGroup(PermissionGroupBase):
+    id: int
+    permissions: List[Permission] = []
+
+    class Config:
+        orm_mode = True
+
+class ToolBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    type: str
+    icon_url: Optional[str] = None
+
+class ToolCreate(ToolBase):
+    pass
+
+class Tool(ToolBase):
+    id: int
+    permission_group: Optional[PermissionGroup] = None
+
+    class Config:
+        orm_mode = True
+
+class McpServerBase(BaseModel):
+    name: str
+    url: str
+    type: str
+    icon_url: Optional[str] = None
+
+class McpServerCreate(McpServerBase):
+    pass
+
+class McpServer(McpServerBase):
+    id: int
+    permission_group: Optional[PermissionGroup] = None
+
+    class Config:
+        orm_mode = True
+
 class RoleBase(BaseModel):
     name: str
 
@@ -50,7 +68,7 @@ class RoleCreate(RoleBase):
 
 class Role(RoleBase):
     id: int
-    permissions: List[Permission] = []
+    permission_groups: List[PermissionGroup] = []
 
     class Config:
         orm_mode = True
@@ -74,10 +92,11 @@ class AppSettingBase(BaseModel):
     value: str
 
 class AppSettingCreate(AppSettingBase):
-    pass
+    isFirstRun: Optional[bool] = None
 
 class AppSetting(AppSettingBase):
     id: int
+    isFirstRun: bool
 
     class Config:
         orm_mode = True
@@ -87,11 +106,14 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    user_type: UserType
 
 class User(UserBase):
     id: int
     is_active: bool
+    user_type: UserType
     roles: List[Role] = []
+    permission_groups: List[PermissionGroup] = []
     settings: List[UserSetting] = []
 
     class Config:

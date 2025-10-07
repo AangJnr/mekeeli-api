@@ -7,7 +7,7 @@ import models
 import security
 import crud.history as history_crud
 from database import get_db
-from mcp_config import get_agent_for_user
+from services.mcp_config import get_agent_for_user
 
 router = APIRouter()
 
