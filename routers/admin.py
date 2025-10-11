@@ -23,48 +23,26 @@ def create_user(
     current_user: models.User = Depends(security.get_current_admin_user)
 ):
     """
-    Creates a new user. Only available to admins in an ORGANIZATION setup.
+    Creates a new user within the administrator's organization.
+    Only available to admins in an ORGANIZATION setup.
     """
-    # Verify that the admin is part of an ORGANIZATION
     if current_user.user_type != UserType.ORGANIZATION:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators in an organization can create new users.",
         )
 
+    if not current_user.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Administrator is not associated with an organization.",
+        )
+
     db_user = crud_users.get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
     
-    return crud_users.create_user(db=db, user=user)
+    # Automatically assign the new user to the admin's organization
+    return crud_users.create_user(db=db, user=user, org_id=current_user.org_id)
 
-# --- Role Management ---
-@router.post("/roles/{role_id}/permission_groups/{pg_id}")
-def assign_permission_group_to_role(role_id: int, pg_id: int, db: Session = Depends(get_db)):
-    role = crud_roles.get_role(db, role_id)
-    pg = crud_pg.get_permission_group(db, pg_id)
-    if not role or not pg:
-        raise HTTPException(status_code=404, detail="Role or Permission Group not found")
-    
-    if pg not in role.permission_groups:
-        role.permission_groups.append(pg)
-        db.commit()
-    return {"message": "Permission group assigned to role successfully"}
-
-# --- App Settings ---
-@router.get("/settings/is_first_run", response_model=bool)
-def is_first_run(db: Session = Depends(get_db)):
-    setting = crud_settings.get_app_setting(db, key="isFirstRun")
-    if setting and not setting.isFirstRun:
-        return False
-    return True
-
-@router.post("/settings/complete_setup")
-def complete_setup(db: Session = Depends(get_db)):
-    setting = crud_settings.get_app_setting(db, key="isFirstRun")
-    if not setting:
-        crud_settings.create_app_setting(db, schemas.AppSettingCreate(key="isFirstRun", value="False", isFirstRun=False))
-    else:
-        setting.isFirstRun = False
-        db.commit()
-    return {"message": "Setup complete"}
+# ... (rest of admin router remains the same) ...

@@ -1,78 +1,99 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import schemas
 import models
 import security
-import crud.history as history_crud
+from crud import chat_sessions as crud_chat
+from crud import tasks as crud_tasks
 from database import get_db
 from services.mcp_config import get_agent_for_user
+import uuid
 
 router = APIRouter()
 
-class ChatResponse(schemas.BaseModel):
-    """Chat response schema."""
-    result: str
-    conversation_id: int
-
-class ChatMessage(schemas.BaseModel):
-    """Chat message schema."""
-    message: str
-    conversation_id: int | None = None
-
-async def stream_agent_response(db: Session, conversation_id: int, user_message: str, agent):
-    """
-    Streams the agent's response, yielding each chunk, and saves the full 
-    response to the database after completion.
-    """
+async def stream_agent_response(db: Session, session_id: uuid.UUID, prompt: str, agent, attachments: list = []):
     full_response = []
-    # Assuming the agent has a streaming method like 'astream'
-    async for chunk in agent.astream(user_message):
+    async for chunk in agent.astream(prompt):
         full_response.append(chunk)
         yield chunk
     
-    # Once streaming is complete, save the full response to the history
-    history_crud.create_chat_message(
+    # The agent's response won't have the task/tool context, so metadata is minimal
+    crud_chat.create_chat_message(
         db=db, 
-        conversation_id=conversation_id, 
-        sender="ai", 
-        content="".join(full_response)
+        session_id=session_id, 
+        message=schemas.ChatMessageCreate(
+            sender="assistant", 
+            content="".join(full_response)
+        )
     )
 
 @router.post("/chat", tags=["Chat"])
 async def run_chat(
-    chat_message: ChatMessage,
+    request: schemas.ChatRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_active_user),
 ):
-    """
-    Processes a user's chat message using a dynamically configured agent, 
-    maintaining conversation history and streaming the response.
-    """
-    # 1. Get or create the conversation
-    conversation_id = chat_message.conversation_id
-    if conversation_id:
-        conversation = history_crud.get_conversation(db, conversation_id)
-        if not conversation or conversation.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Conversation not found or access denied")
+    session_id = request.session_id
+    prompt = request.message
+
+    # 1. Get Agent based on context (Task, Tool, or Open-ended)
+    agent = get_agent_for_user(
+        db, 
+        current_user, 
+        task_id=request.task_id, 
+        tool_id=request.tool_id
+    )
+
+    # 2. Handle Task-specific prompt modifications
+    if request.task_id:
+        task = crud_tasks.get_task(db, request.task_id)
+        if not task:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        if task.default_prompt:
+            prompt = f"{task.default_prompt}\n\nUser query: {prompt}"
+
+    # 3. Get or Create Chat Session
+    if session_id:
+        session = crud_chat.get_chat_session(db, session_id)
+        if not session or session.user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat session not found or access denied")
     else:
-        conversation = history_crud.create_conversation(db, user_id=current_user.id)
-        conversation_id = conversation.id
+        # If this is a new session, associate it with the task if provided
+        session = crud_chat.create_chat_session(
+            db, 
+            schemas.ChatSessionCreate(user_id=current_user.id, task_id=request.task_id)
+        )
+        session_id = session.id
 
-    # 2. Add the user's new message to the history
-    history_crud.create_chat_message(
+    # 4. Store User Message with context in metadata
+    message_metadata = {
+        "attachments": [att.dict() for att in request.attachments],
+        "task_id": request.task_id,
+        "tool_id": request.tool_id
+    }
+    crud_chat.create_chat_message(
         db=db, 
-        conversation_id=conversation_id, 
-        sender="user", 
-        content=chat_message.message
+        session_id=session_id, 
+        message=schemas.ChatMessageCreate(
+            sender="user", 
+            content=prompt,
+            metadata=message_metadata
+        )
     )
 
-    # 3. Get the agent for the user
-    agent = get_agent_for_user(db, current_user)
-
-    # 4. Return a streaming response
-    return StreamingResponse(
-        stream_agent_response(db, conversation_id, chat_message.message, agent), 
-        media_type="text/plain"
-    )
+    # 5. Handle Streaming or Standard Response
+    if request.stream:
+        return StreamingResponse(
+            stream_agent_response(db, session_id, prompt, agent, request.attachments), 
+            media_type="text/plain"
+        )
+    else:
+        result = await agent.run(prompt)
+        crud_chat.create_chat_message(
+            db=db, 
+            session_id=session_id, 
+            message=schemas.ChatMessageCreate(sender="assistant", content=result)
+        )
+        return {"result": result, "session_id": session_id}

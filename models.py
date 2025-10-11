@@ -1,44 +1,86 @@
 
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Table, Enum
+import uuid
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Table, Enum, Text
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from database import Base
 from enums import UserType
 
-# Association tables for many-to-many relationships
+# --- Association Tables --
+
 user_permission_groups = Table('user_permission_groups', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('permission_group_id', Integer, ForeignKey('permission_groups.id'))
+    Column('user_id', String, ForeignKey('users.id')),
+    Column('permission_group_id', String, ForeignKey('permission_groups.id'))
 )
 
 role_permission_groups = Table('role_permission_groups', Base.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id')),
-    Column('permission_group_id', Integer, ForeignKey('permission_groups.id'))
+    Column('role_id', String, ForeignKey('roles.id')),
+    Column('permission_group_id', String, ForeignKey('permission_groups.id'))
 )
 
 permission_group_permissions = Table('permission_group_permissions', Base.metadata,
-    Column('permission_group_id', Integer, ForeignKey('permission_groups.id')),
-    Column('permission_id', Integer, ForeignKey('permissions.id'))
+    Column('permission_group_id', String, ForeignKey('permission_groups.id')),
+    Column('permission_id', String, ForeignKey('permissions.id'))
 )
+
+user_roles = Table('user_roles', Base.metadata,
+    Column('user_id', String, ForeignKey('users.id')),
+    Column('role_id', String, ForeignKey('roles.id'))
+)
+
+
+# --- Main Models ---
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, index=True, nullable=False)
+    industry = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
+    subscription_plan = Column(String, default="free")
+    is_active = Column(Boolean, default=True)
+    logo_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = Column(String, ForeignKey("organizations.id"), nullable=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    tool_ids = Column(ARRAY(String), nullable=True)
+    default_prompt = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+    is_public = Column(Boolean, default=False)
+
+    creator = relationship("User", back_populates="tasks", lazy="joined")
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     user_type = Column(Enum(UserType))
-
-    roles = relationship("Role", secondary="user_roles")
+    org_id = Column(String, ForeignKey("organizations.id"), nullable=True)
+    organization = relationship("Organization")
+    roles = relationship("Role", secondary=user_roles)
     permission_groups = relationship("PermissionGroup", secondary=user_permission_groups)
     settings = relationship("UserSetting", back_populates="user")
-    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="creator")
 
 class Role(Base):
     __tablename__ = "roles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
 
     permission_groups = relationship("PermissionGroup", secondary=role_permission_groups)
@@ -46,23 +88,23 @@ class Role(Base):
 class PermissionGroup(Base):
     __tablename__ = "permission_groups"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
     
     permissions = relationship("Permission", secondary=permission_group_permissions)
-    mcp_server_id = Column(Integer, ForeignKey("mcp_servers.id"))
-    tool_id = Column(Integer, ForeignKey("tools.id"))
+    mcp_server_id = Column(String, ForeignKey("mcp_servers.id"))
+    tool_id = Column(String, ForeignKey("tools.id"))
 
 class Permission(Base):
     __tablename__ = "permissions"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
 
 class McpServer(Base):
     __tablename__ = "mcp_servers"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
     url = Column(String)
     type = Column(String, index=True)
@@ -73,7 +115,7 @@ class McpServer(Base):
 class Tool(Base):
     __tablename__ = "tools"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
     description = Column(String)
     type = Column(String, index=True)
@@ -84,38 +126,43 @@ class Tool(Base):
 class UserSetting(Base):
     __tablename__ = "user_settings"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     key = Column(String, index=True)
     value = Column(String)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(String, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="settings")
 
 class AppSetting(Base):
     __tablename__ = "app_settings"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     key = Column(String, unique=True, index=True)
     value = Column(String)
     isFirstRun = Column(Boolean, default=True)
 
-class Conversation(Base):
-    __tablename__ = "conversations"
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    org_id = Column(String, ForeignKey("organizations.id"), nullable=True)
+    task_id = Column(String, ForeignKey("tasks.id"), nullable=True)
+    title = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
 
-    user = relationship("User", back_populates="conversations")
-    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="chat_sessions")
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"))
-    sender = Column(String)
-    content = Column(String)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
+    sender = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    metadata = Column(JSONB, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    conversation = relationship("Conversation", back_populates="messages")
+    session = relationship("ChatSession", back_populates="messages")
