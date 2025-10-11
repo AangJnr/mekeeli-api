@@ -1,10 +1,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import schemas, crud, models, security
+import schemas
+import models
+import security
 from database import get_db
 from celery_worker import query_mcp_task
-from mcp_integration import get_mcp_api_key
+from services.mcp_integration import get_mcp_api_key
+from crud import mcp_servers as crud_mcp
 
 router = APIRouter()
 
@@ -18,7 +21,7 @@ def query_mcp(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_active_user),
 ):
-    mcp_server = crud.get_mcp_server(db, server_id=query.mcp_server_id)
+    mcp_server = crud_mcp.get_mcp_server(db, server_id=query.mcp_server_id)
     if not mcp_server:
         raise HTTPException(status_code=404, detail="MCP server not found")
 
