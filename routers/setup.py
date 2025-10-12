@@ -16,7 +16,7 @@ router = APIRouter(
 @router.post("/initial-admin", response_model=schemas.User)
 def create_initial_admin(setup_data: schemas.InitialAdminCreate, db: Session = Depends(get_db)):
     """
-    Creates the initial administrator and, if applicable, the organization.
+    Creates the initial administrator and their organization (default for INDIE).
     This endpoint is only available if the application has not been set up yet.
     """
     # 1. Verify that this is the first run
@@ -34,19 +34,27 @@ def create_initial_admin(setup_data: schemas.InitialAdminCreate, db: Session = D
             detail="An initial user already exists.",
         )
         
-    # 3. Handle Organization Creation
+    # 3. Handle Organization Creation based on User Type
     user_data = setup_data.admin_user
+    org_to_create = None
+    
     if user_data.user_type == UserType.ORGANIZATION:
         if not setup_data.organization:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Organization details are required for ORGANIZATION user type.",
             )
-        # Create the organization using the full schema
-        crud_orgs.create_organization(db, org=setup_data.organization)
+        org_to_create = setup_data.organization
+    
+    elif user_data.user_type == UserType.INDIE:
+        # Create a default organization for the INDIE user
+        org_to_create = schemas.OrganizationCreate(name=f"{user_data.username}'s Workspace")
+
+    # Create the organization and get the db object back
+    db_org = crud_orgs.create_organization(db, org=org_to_create)
         
-    # 4. Create the new user
-    db_user = crud_users.create_user(db=db, user=user_data)
+    # 4. Create the new user and assign the new org_id
+    db_user = crud_users.create_user(db=db, user=user_data, org_id=db_org.id)
     
     # 5. Find or create the 'admin' role and assign it
     admin_role = crud_roles.get_role_by_name(db, name="admin")

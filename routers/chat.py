@@ -10,6 +10,7 @@ from crud import tasks as crud_tasks
 from database import get_db
 from services.mcp_config import get_agent_for_user
 import uuid
+from enums import SenderType
 
 router = APIRouter()
 
@@ -19,12 +20,11 @@ async def stream_agent_response(db: Session, session_id: uuid.UUID, prompt: str,
         full_response.append(chunk)
         yield chunk
     
-    # The agent's response won't have the task/tool context, so metadata is minimal
     crud_chat.create_chat_message(
         db=db, 
         session_id=session_id, 
         message=schemas.ChatMessageCreate(
-            sender="assistant", 
+            sender=SenderType.AI, 
             content="".join(full_response)
         )
     )
@@ -35,10 +35,9 @@ async def run_chat(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_active_user),
 ):
-    session_id = request.session_id
+    session_id = request.session_.id
     prompt = request.message
 
-    # 1. Get Agent based on context (Task, Tool, or Open-ended)
     agent = get_agent_for_user(
         db, 
         current_user, 
@@ -46,7 +45,6 @@ async def run_chat(
         tool_id=request.tool_id
     )
 
-    # 2. Handle Task-specific prompt modifications
     if request.task_id:
         task = crud_tasks.get_task(db, request.task_id)
         if not task:
@@ -54,20 +52,17 @@ async def run_chat(
         if task.default_prompt:
             prompt = f"{task.default_prompt}\n\nUser query: {prompt}"
 
-    # 3. Get or Create Chat Session
     if session_id:
         session = crud_chat.get_chat_session(db, session_id)
         if not session or session.user_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat session not found or access denied")
     else:
-        # If this is a new session, associate it with the task if provided
         session = crud_chat.create_chat_session(
             db, 
             schemas.ChatSessionCreate(user_id=current_user.id, task_id=request.task_id)
         )
         session_id = session.id
 
-    # 4. Store User Message with context in metadata
     message_metadata = {
         "attachments": [att.dict() for att in request.attachments],
         "task_id": request.task_id,
@@ -77,13 +72,12 @@ async def run_chat(
         db=db, 
         session_id=session_id, 
         message=schemas.ChatMessageCreate(
-            sender="user", 
+            sender=SenderType.USER, 
             content=prompt,
             metadata=message_metadata
         )
     )
 
-    # 5. Handle Streaming or Standard Response
     if request.stream:
         return StreamingResponse(
             stream_agent_response(db, session_id, prompt, agent, request.attachments), 
@@ -94,6 +88,6 @@ async def run_chat(
         crud_chat.create_chat_message(
             db=db, 
             session_id=session_id, 
-            message=schemas.ChatMessageCreate(sender="assistant", content=result)
+            message=schemas.ChatMessageCreate(sender=SenderType.AI, content=result)
         )
         return {"result": result, "session_id": session_id}

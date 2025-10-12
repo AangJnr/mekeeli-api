@@ -5,9 +5,9 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, T
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from database import Base
-from enums import UserType
+from enums import UserType, SenderType
 
-# --- Association Tables --
+# --- Association Tables ---
 
 user_permission_groups = Table('user_permission_groups', Base.metadata,
     Column('user_id', String, ForeignKey('users.id')),
@@ -160,7 +160,7 @@ class ChatMessage(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
-    sender = Column(String, nullable=False)
+    sender = Column(Enum(SenderType), nullable=False)
     content = Column(Text, nullable=False)
     metadata = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

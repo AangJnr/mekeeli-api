@@ -3,7 +3,7 @@ import uuid
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from enums import UserType
+from enums import UserType, SenderType
 
 # --- Attachment Schemas ---
 class Attachment(BaseModel):
@@ -114,7 +114,7 @@ class AppSetting(AppSettingBase):
 
 # --- Chat Schemas ---
 class ChatMessageBase(BaseModel):
-    sender: str
+    sender: SenderType
     content: str
     metadata: Optional[Dict[str, Any]] = None
 
@@ -153,7 +153,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Existing chat session id (if continuing).")
     attachments: Optional[List[Attachment]] = Field(default_factory=list, description="Optional files or documents.")
     context: Optional[Dict[str, Any]] = None
-    stream: Optional[bool] = Field(False, description="Enable streaming responses.")
+    stream: Optional[bool] = Field(True, description="Enable streaming responses.")
 
 # --- Task Schemas ---
 class TaskBase(BaseModel):
