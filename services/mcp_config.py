@@ -66,7 +66,7 @@ def get_agent_for_user(
     client_config = {"mcpServers": mcp_servers_config}
     client = MCPClient.from_dict(client_config)
 
-    system_prompt = "You are an expert assistant."
+    system_prompt = "You are a helpful assistant that can answer questions and help with tasks."
     if capability_types:
         prompt_parts = sorted(list(capability_types))
         system_prompt += f" You have access to { ', '.join(prompt_parts) }."
