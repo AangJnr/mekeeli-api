@@ -23,11 +23,11 @@ def get_unique_filename(filename: str) -> str:
 @router.post("/attachment", response_model=schemas.Attachment)
 async def upload_attachment(file: UploadFile = File(...)):
     """
-    Uploads a file and returns its attachment metadata.
+    Uploads a file and returns its attachment meta_data.
     """
     unique_filename = get_unique_filename(file.filename)
     file_path = UPLOAD_DIRECTORY / unique_filename
-    
+
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -46,7 +46,7 @@ async def delete_attachment(filename: str):
     file_path = UPLOAD_DIRECTORY / filename
     if not file_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
-        
+
     file_path.unlink()
-    
+
     return {"message": f"Attachment '{filename}' deleted successfully."}

@@ -1,5 +1,5 @@
 
-import datetime
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Table, Enum, Text
 from sqlalchemy.orm import relationship
@@ -43,7 +43,7 @@ class Organization(Base):
     subscription_plan = Column(String, default="free")
     is_active = Column(Boolean, default=True)
     logo_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -55,7 +55,7 @@ class Task(Base):
     description = Column(Text, nullable=True)
     tool_ids = Column(ARRAY(String), nullable=True)
     default_prompt = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
     is_public = Column(Boolean, default=False)
 
@@ -90,7 +90,7 @@ class PermissionGroup(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
-    
+
     permissions = relationship("Permission", secondary=permission_group_permissions)
     mcp_server_id = Column(String, ForeignKey("mcp_servers.id"))
     tool_id = Column(String, ForeignKey("tools.id"))
@@ -111,7 +111,7 @@ class McpServer(Base):
     icon_url = Column(String, nullable=True)
 
     permission_group = relationship("PermissionGroup", uselist=False, backref="mcp_server")
-    
+
 class Tool(Base):
     __tablename__ = "tools"
 
@@ -149,7 +149,7 @@ class ChatSession(Base):
     org_id = Column(String, ForeignKey("organizations.id"), nullable=True)
     task_id = Column(String, ForeignKey("tasks.id"), nullable=True)
     title = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     user = relationship("User", back_populates="chat_sessions")
@@ -162,7 +162,7 @@ class ChatMessage(Base):
     session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
     sender = Column(Enum(SenderType), nullable=False)
     content = Column(Text, nullable=False)
-    metadata = Column(JSONB, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    meta_data = Column(JSONB, nullable=True)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     session = relationship("ChatSession", back_populates="messages")

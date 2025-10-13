@@ -19,12 +19,12 @@ async def stream_agent_response(db: Session, session_id: uuid.UUID, prompt: str,
     async for chunk in agent.astream(prompt):
         full_response.append(chunk)
         yield chunk
-    
+
     crud_chat.create_chat_message(
-        db=db, 
-        session_id=session_id, 
+        db=db,
+        session_id=session_id,
         message=schemas.ChatMessageCreate(
-            sender=SenderType.AI, 
+            sender=SenderType.AI,
             content="".join(full_response)
         )
     )
@@ -39,9 +39,9 @@ async def run_chat(
     prompt = request.message
 
     agent = get_agent_for_user(
-        db, 
-        current_user, 
-        task_id=request.task_id, 
+        db,
+        current_user,
+        task_id=request.task_id,
         tool_id=request.tool_id
     )
 
@@ -58,36 +58,36 @@ async def run_chat(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat session not found or access denied")
     else:
         session = crud_chat.create_chat_session(
-            db, 
+            db,
             schemas.ChatSessionCreate(user_id=current_user.id, task_id=request.task_id)
         )
         session_id = session.id
 
-    message_metadata = {
+    message_meta_data = {
         "attachments": [att.dict() for att in request.attachments],
         "task_id": request.task_id,
         "tool_id": request.tool_id
     }
     crud_chat.create_chat_message(
-        db=db, 
-        session_id=session_id, 
+        db=db,
+        session_id=session_id,
         message=schemas.ChatMessageCreate(
-            sender=SenderType.USER, 
+            sender=SenderType.USER,
             content=prompt,
-            metadata=message_metadata
+            metadata=message_meta_data
         )
     )
 
     if request.stream:
         return StreamingResponse(
-            stream_agent_response(db, session_id, prompt, agent, request.attachments), 
+            stream_agent_response(db, session_id, prompt, agent, request.attachments),
             media_type="text/plain"
         )
     else:
         result = await agent.run(prompt)
         crud_chat.create_chat_message(
-            db=db, 
-            session_id=session_id, 
+            db=db,
+            session_id=session_id,
             message=schemas.ChatMessageCreate(sender=SenderType.AI, content=result)
         )
         return {"result": result, "session_id": session_id}

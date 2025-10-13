@@ -116,7 +116,7 @@ class AppSetting(AppSettingBase):
 class ChatMessageBase(BaseModel):
     sender: SenderType
     content: str
-    metadata: Optional[Dict[str, Any]] = None
+    meta_data: Optional[Dict[str, Any]] = None
 
 class ChatMessageCreate(ChatMessageBase):
     pass
