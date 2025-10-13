@@ -41,6 +41,8 @@ class PermissionGroup(PermissionGroupBase):
 
 class ToolBase(BaseModel):
     name: str
+    key: str
+    config: Dict[str, Any]
     description: Optional[str] = None
     type: str
     icon_url: Optional[str] = None
@@ -57,6 +59,8 @@ class Tool(ToolBase):
 
 class McpServerBase(BaseModel):
     name: str
+    key: str
+    config: Dict[str, Any]
     url: str
     type: str
     icon_url: Optional[str] = None

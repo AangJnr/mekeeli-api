@@ -106,6 +106,8 @@ class McpServer(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
+    key = Column(String, unique=True, index=True)
+    config = Column(JSONB)
     url = Column(String)
     type = Column(String, index=True)
     icon_url = Column(String, nullable=True)
@@ -117,6 +119,8 @@ class Tool(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, index=True)
+    key = Column(String, unique=True, index=True)
+    config = Column(JSONB)
     description = Column(String)
     type = Column(String, index=True)
     icon_url = Column(String, nullable=True)
