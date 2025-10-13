@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -14,9 +13,28 @@ fi
 echo "Activating virtual environment..."
 source .venv/bin/activate
 
+
+# Open Docker
+open -a Docker
+
+docker compose -f ../docker-compose.yml -f ../docker-compose.override.yml down
+sleep 5
+
+# Load environment variables from .env.local
+set -a  # automatically export all variables
+source .env.local
+set +a
+echo "Environment variables loaded from .env.local."
+
+
+docker compose -f ../docker-compose.yml -f ../docker-compose.override.yml up db -d
+# Wait a few seconds for postgres to initialize
+sleep 10
+
 # Install dependencies from requirements.txt.
 echo "Installing dependencies..."
 pip install -r requirements.txt
+
 
 # Run database migrations.
 echo "Running database migrations..."

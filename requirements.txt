@@ -5,6 +5,7 @@ autopep8
 # App
 fastapi
 uvicorn
+mcp-use
 langchain-ollama
 mcp
 celery
