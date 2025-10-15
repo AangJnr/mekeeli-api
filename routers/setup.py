@@ -27,15 +27,16 @@ def create_initial_admin(setup_data: schemas.InitialAdminCreate, db: Session = D
             detail="Application setup has already been completed.",
         )
         
-    # 2. Additional check: ensure no other users exist
-    if crud_users.get_users(db, limit=1):
+    user_data = setup_data.admin_user
+
+    # 2. Check if a user with this email already exists
+    if crud_users.get_user_by_email(db, email=user_data.email):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="An initial user already exists.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists.",
         )
         
     # 3. Handle Organization Creation based on User Type
-    user_data = setup_data.admin_user
     org_to_create = None
     
     if user_data.user_type == UserType.ORGANIZATION:

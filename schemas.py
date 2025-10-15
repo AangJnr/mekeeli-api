@@ -1,6 +1,6 @@
 
 import uuid
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enums import UserType, SenderType
@@ -203,6 +203,7 @@ class Organization(OrganizationBase):
 # --- User & Auth Schemas ---
 class UserBase(BaseModel):
     username: str
+    email: EmailStr
 
 class UserCreate(UserBase):
     password: str
@@ -233,4 +234,5 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+

@@ -17,18 +17,20 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     """
-    Authenticates a user and returns a JWT access token.
+    Authenticates a user via email and password, returning a JWT access token.
+    Note: The 'username' field in the form is treated as the user's email.
     """
-    user = security.authenticate_user(db, form_data.username, form_data.password)
+    user = security.authenticate_user(db, email=form_data.username, password=form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # The 'sub' of the token should be the user's unique identifier (email)
     access_token = security.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.email}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

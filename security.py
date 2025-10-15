@@ -9,6 +9,7 @@ import schemas, database, models
 from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
+from crud import users as crud_users
 
 load_dotenv()
 
@@ -16,14 +17,12 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
-    print(f"Password value: {password}")
+def get_password_hash(password: str):
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -36,15 +35,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_user(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
-
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user(db, username=username)
+def authenticate_user(db: Session, email: str, password: str):
+    user = crud_users.get_user_by_email(db, email=email)
     if not user:
-        return False
+        return None
     if not verify_password(password, user.hashed_password):
-        return False
+        return None
     return user
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
@@ -55,13 +51,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        email: str = payload.get("sub")
+        if email is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
+        token_data = schemas.TokenData(email=email)
     except JWTError:
         raise credentials_exception
-    user = get_user(db, username=token_data.username)
+    user = crud_users.get_user_by_email(db, email=token_data.email)
     if user is None:
         raise credentials_exception
     return user
