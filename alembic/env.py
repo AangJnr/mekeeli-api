@@ -8,8 +8,8 @@ from alembic import context
 
 import os
 import sys
-from models import Base
-from database import SQLALCHEMY_DATABASE_URL
+from app.db.base import Base
+from app.db.session import SQLALCHEMY_DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -63,7 +63,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    from database import engine
+    from app.db.session import engine
     connectable = engine
 
     with connectable.connect() as connection:

@@ -1,0 +1,38 @@
+[project]
+name = "mekeeli-api"
+version = "0.1.0"
+description = "Mekeeli FastAPI backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "mcp-use",
+    "langchain-ollama",
+    "mcp",
+    "celery",
+    "redis",
+    "ollama",
+    "sqlalchemy",
+    "alembic",
+    "passlib[bcrypt]",
+    "python-jose",
+    "python-dotenv",
+    "gunicorn",
+    "jsonschema",
+    "croniter",
+    "python-dateutil",
+    "pypdf",
+    "python-docx",
+    "email-validator",
+    "python-multipart",
+    "psycopg2-binary",
+    "pymysql",
+]
+
+[dependency-groups]
+dev = [
+    "autopep8",
+]
+
+[tool.uv]
+package = false

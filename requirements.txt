@@ -17,6 +17,13 @@ passlib[bcrypt]
 python-jose
 python-dotenv
 gunicorn
+jsonschema
+croniter
+python-dateutil
+pypdf
+python-docx
+email-validator
+python-multipart
 
 # Database Drivers
 psycopg2-binary
