@@ -24,7 +24,7 @@ class Permission(PermissionBase):
     id: uuid.UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PermissionGroupBase(BaseModel):
     name: str
@@ -37,7 +37,7 @@ class PermissionGroup(PermissionGroupBase):
     permissions: List[Permission] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ToolBase(BaseModel):
     name: str
@@ -61,7 +61,7 @@ class Tool(ToolBase):
     permissions: Optional[List["ToolPermission"]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ToolUpdate(BaseModel):
     name: Optional[str] = None
@@ -90,7 +90,7 @@ class ToolPermission(ToolPermissionBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ToolRunBase(BaseModel):
     tool_id: uuid.UUID
@@ -106,7 +106,7 @@ class ToolRun(ToolRunBase):
     finished_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class McpServerBase(BaseModel):
     name: str
@@ -124,7 +124,7 @@ class McpServer(McpServerBase):
     permission_group: Optional[PermissionGroup] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RoleBase(BaseModel):
     name: str
@@ -137,7 +137,7 @@ class Role(RoleBase):
     permission_groups: List[PermissionGroup] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserSettingBase(BaseModel):
     key: str
@@ -151,7 +151,7 @@ class UserSetting(UserSettingBase):
     user_id: uuid.UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AppSettingBase(BaseModel):
     key: str
@@ -165,7 +165,7 @@ class AppSetting(AppSettingBase):
     isFirstRun: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class SettingsBase(BaseModel):
     offline_mode: bool = True
@@ -186,7 +186,7 @@ class Settings(SettingsBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Diagnostics(BaseModel):
     offline_mode: bool
@@ -212,8 +212,8 @@ class File(FileBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        validate_by_name = True
 
 class RagDocument(BaseModel):
     id: uuid.UUID
@@ -223,7 +223,7 @@ class RagDocument(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RagChunk(BaseModel):
     id: uuid.UUID
@@ -238,8 +238,8 @@ class RagChunk(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        validate_by_name = True
 
 class RagQueryRequest(BaseModel):
     query: str
@@ -270,7 +270,7 @@ class ChatMessage(ChatMessageBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChatSessionBase(BaseModel):
     title: Optional[str] = None
@@ -293,7 +293,7 @@ class ChatSession(ChatSessionBase):
     messages: List[ChatMessage] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChatSessionSummary(ChatSessionBase):
     id: uuid.UUID
@@ -302,7 +302,7 @@ class ChatSessionSummary(ChatSessionBase):
     is_active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChatRequest(BaseModel):
     message: str = Field(..., description="User input or query.")
@@ -351,8 +351,8 @@ class Task(TaskBase):
     enabled: bool = Field(..., alias="is_active")
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        validate_by_name = True
 
 class TaskRun(BaseModel):
     id: uuid.UUID
@@ -364,7 +364,7 @@ class TaskRun(BaseModel):
     finished_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- Organization Schemas ---
 class OrganizationBase(BaseModel):
@@ -384,7 +384,7 @@ class Organization(OrganizationBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- User & Auth Schemas ---
 class UserBase(BaseModel):
@@ -424,7 +424,7 @@ class User(UserBase):
     tasks: List[Task] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str

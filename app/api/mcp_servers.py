@@ -2,20 +2,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import schemas
-from app.db import models
 from app.core import security
 from app.crud import mcp_servers as crud_mcp
-from app.db.session import SessionLocal
+from app.db.session import get_db
 
 router = APIRouter()
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/mcp_servers/", response_model=schemas.McpServer, dependencies=[Depends(security.get_current_admin_user)])
 def create_mcp_server(server: schemas.McpServerCreate, db: Session = Depends(get_db)):

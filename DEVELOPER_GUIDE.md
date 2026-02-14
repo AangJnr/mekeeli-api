@@ -171,8 +171,62 @@ This guide is for engineers inheriting `mekeeli-api`. It documents the current b
 - Worker heartbeat file defaults to `data/worker_heartbeat.json` and is consumed by `/health`.
 - FastAPI docs are available by default (`/docs`, `/redoc`) unless disabled in app init.
 
-## 8) Current cleanup items to verify
+## 8) Docker command quick-reference (from repo root)
 
-- Some route files define local `get_db` dependencies while others use `app.db.session.get_db`; standardize if you want a single pattern.
-- `app/api/user_settings.py` currently allows any authenticated user to read/write settings for any `user_id`; add ownership/admin checks before production.
-- `app/schemas.py` still uses Pydantic v1-style `Config` keys (`orm_mode`, `allow_population_by_field_name`); migrate to Pydantic v2 config style for warning-free startup.
+- Helper script:
+  - `./scripts/docker-ops.sh help`
+  - Wraps common `docker compose` operations used below.
+- Stack status:
+  - `docker compose ps`
+  - `docker compose ps -a`
+- Start / rebuild all services:
+  - `docker compose up -d --build`
+- Start specific services:
+  - `docker compose up -d db ollama`
+  - `docker compose up -d mekeeli-api mekeeli-ui`
+- Stop all services (keep containers):
+  - `docker compose stop`
+- Stop specific services:
+  - `docker compose stop mekeeli-api`
+  - `docker compose stop mekeeli-ui`
+- Start previously stopped services:
+  - `docker compose start`
+  - `docker compose start mekeeli-api`
+- Restart services:
+  - `docker compose restart`
+  - `docker compose restart ollama`
+  - `docker compose restart mekeeli-api mekeeli-ui`
+- Tail logs:
+  - `docker compose logs -f`
+  - `docker compose logs -f ollama`
+  - `docker compose logs -f mekeeli-api`
+  - `docker compose logs -f mekeeli-ui`
+- Tail recent logs only:
+  - `docker compose logs --tail=200 mekeeli-api`
+- Run one-off command inside container:
+  - `docker compose exec mekeeli-api uv run alembic upgrade head`
+  - `docker compose exec ollama ollama list`
+- Remove stopped containers:
+  - `docker compose rm -f`
+  - `docker compose rm -f mekeeli-api`
+- Full teardown:
+  - `docker compose down`
+- Full teardown + delete volumes:
+  - `docker compose down -v` (destructive; deletes DB and persisted data volumes)
+
+## 9) Cleanup status and verification
+
+- `DB dependency standardization` (addressed):
+  - API modules now use shared `app.db.session.get_db` instead of local `SessionLocal` wrappers.
+  - Updated modules: `app/api/app_settings.py`, `app/api/permissions.py`, `app/api/roles.py`, `app/api/mcp_servers.py`, `app/api/tools.py`, `app/api/user_settings.py`.
+- `User settings authorization` (addressed):
+  - `app/api/user_settings.py` now enforces owner-or-admin checks for read/write.
+  - Requests for a different `user_id` return `403` unless caller has `admin` role.
+- `Pydantic v2 config key migration` (addressed):
+  - `app/schemas.py` uses `from_attributes` and `validate_by_name` in model config blocks.
+  - This removes startup warnings tied to old v1 keys.
+
+Quick verification checklist:
+- `docker compose logs --tail=200 mekeeli-api` (confirm no `orm_mode` / `allow_population_by_field_name` warnings).
+- `docker compose exec mekeeli-api uv run python -m py_compile app/api/user_settings.py app/schemas.py`.
+- Call `GET /users/{other_user_id}/settings/` as non-admin and verify `403`.

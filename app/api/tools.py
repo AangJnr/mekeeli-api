@@ -2,11 +2,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app import schemas
-from app.db import models
 from app.core import security
 from app.crud import tools as crud_tools
 from app.crud import tool_permissions as crud_tool_permissions
-from app.db.session import SessionLocal
+from app.db.session import get_db
 
 router = APIRouter()
 
@@ -32,14 +31,6 @@ def validate_tool_payload(tool_data: schemas.ToolBase, is_update: bool = False):
         entrypoint = tool_data.config.get("entrypoint", "run")
         if entrypoint is not None and not isinstance(entrypoint, str):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tool config entrypoint must be a string")
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/tools/", response_model=schemas.Tool, dependencies=[Depends(security.get_current_admin_user)])
 def create_tool(tool: schemas.ToolCreate, db: Session = Depends(get_db)):
