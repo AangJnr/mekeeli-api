@@ -25,19 +25,24 @@ def _check_db() -> dict:
 
 def _check_ollama() -> dict:
     try:
-        import ollama  # type: ignore
+        from ollama import Client
+  # type: ignore
     except Exception as exc:
         return {"status": "unavailable", "detail": str(exc)}
 
     try:
-        ollama.list()
-        return {"status": "ok"}
+        client = Client(
+            host=os.getenv("OLLAMA_HOST")
+            #        headers={'x-some-header': 'some-value'}
+        )
+        return {"status": "ok", "data":   client.list()}
     except Exception as exc:
         return {"status": "error", "detail": str(exc)}
 
 
 def _check_worker() -> dict:
-    heartbeat_path = Path(os.getenv("WORKER_HEARTBEAT_PATH", "data/worker_heartbeat.json"))
+    heartbeat_path = Path(
+        os.getenv("WORKER_HEARTBEAT_PATH", "data/worker_heartbeat.json"))
     if not heartbeat_path.exists():
         return {"status": "missing"}
 
