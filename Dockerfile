@@ -26,8 +26,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
     ENVIRONMENT=production \
-    DATABASE_URL=sqlite:///./sql.db \
-    OLLAMA_URL=http://ollama:11434
+    OLLAMA_HOST=http://ollama:11434
 
 EXPOSE 8000
 
